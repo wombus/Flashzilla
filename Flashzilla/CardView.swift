@@ -1,11 +1,16 @@
 import SwiftUI
+//import UIKit
 
 struct CardView: View {
+    @Environment(\.accessibilityVoiceOverEnabled) var voiceOverEnabled
     @State private var isShowingAnswer = false
     @State private var offset = CGSize.zero
     let card: Card
     
     var removal: (() -> Void)? = nil
+    
+    @State private var feedback = UINotificationFeedbackGenerator()
+    
     
     var body: some View {
         ZStack {
@@ -19,17 +24,26 @@ struct CardView: View {
                         .fill(offset.width > 0 ? .green : .red)
                 )
                 .shadow(radius: 10)
+                .accessibilityAddTraits(.isButton)
             
             VStack {
+                if voiceOverEnabled {
+                    Text(isShowingAnswer ? card.answer : card.prompt)
+                        .font(.largeTitle)
+                        .foregroundColor(.black)
+                } else {
                     Text(card.prompt)
                         .font(.largeTitle)
                         .foregroundColor(.black)
-                if isShowingAnswer {
-                    Text(card.answer)
-                        .font(.title)
-                        .foregroundColor(.gray)
+                    
+                    
+                    if isShowingAnswer {
+                        Text(card.answer)
+                            .font(.title)
+                            .foregroundColor(.gray)
+                    }
                 }
-                }
+            }
             .padding(20)
             .multilineTextAlignment(.center)
         }
@@ -44,13 +58,15 @@ struct CardView: View {
             DragGesture()
                 .onChanged { gesture in
                     offset = gesture.translation
+                    feedback.prepare()
                 }
                 .onEnded { _ in
-                    if abs(offset.width) > 100 {
-                        removal?()
+                    if offset.width > 0 {
+                        feedback.notificationOccurred(.success)
                     } else {
-                        offset = .zero
+                        feedback.notificationOccurred(.error)
                     }
+                    removal?()
                 }
         )
     }
